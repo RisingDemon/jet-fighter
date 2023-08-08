@@ -15,6 +15,7 @@ let x1posInitial = Math.floor(Math.random() * (951)) + 50;
 let y1posInitial = Math.floor(Math.random() * (500)) + 50;
 let score1 = 0,
   score2 = 0;
+let bulTime, shieldInterval, invisibleInterval;
 
 class ships {
     constructor(id, name, x, y, score) {
@@ -26,6 +27,27 @@ class ships {
     }
   }
 
+  function multiBulletFun() {
+    console.log("in multiBulletFun");
+    // generate random coordinates
+    let x = Math.floor(Math.random() * (975) +66);
+    let y = Math.floor(Math.random() * (510) + 66);
+    io.emit("multiBullet", { x: x, y: y });
+  }
+  function shieldFun() {
+    console.log("in shieldFun");
+    // generate random coordinates
+    let x = Math.floor(Math.random() * (975) +66);
+    let y = Math.floor(Math.random() * (510) + 66);
+    io.emit("shield", { x: x, y: y });
+  }
+  function invisibleFun() {
+    console.log("in invisibleFun");
+    // generate random coordinates
+    let x = Math.floor(Math.random() * (975) +66);
+    let y = Math.floor(Math.random() * (510) + 66);
+    io.emit("invisible", { x: x, y: y });
+  }
 
   io.on("connection", (socket) => {
     socket.emit("connectServer", "Hello from server");
@@ -81,6 +103,14 @@ class ships {
       // console.log(spaceShips);
       if (spaceShips.length == 2) {
         console.log("2 players connected");
+        // time for bullet
+        bulTime= setInterval(multiBulletFun, 9000);
+        // setinterval for shield with random time
+        let shieldTime = Math.floor(Math.random() * (12000)) + 6000;
+        shieldInterval = setInterval(shieldFun, shieldTime);
+        let invisibleTime = Math.floor(Math.random() * (12000)) + 6000;
+        invisibleInterval = setInterval(invisibleFun, invisibleTime);
+
         io.emit("allLocations", spaceShips);
       }
     });
@@ -97,6 +127,9 @@ class ships {
     );
     socket.on("disconnect", function () {
       console.log("Disconnected: " + socket.id);
+      clearInterval(bulTime);
+      clearInterval(shieldInterval);
+      clearInterval(invisibleInterval);
       for (var i = 0; i < spaceShips.length; i++) {
         if (socket.id == spaceShips[i].id) {
           spaceShips.splice(i, 1);

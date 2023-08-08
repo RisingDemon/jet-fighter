@@ -2,7 +2,7 @@ let screenX = 1066;
 let screenY = 600;
 let m = 70,
   k = 500;
-let jimg;
+let jimg, bimg, bulImg, shieldImg, invisibleImg;
 let xpos = 20;
 let ypos = 530;
 let dx = 0;
@@ -30,9 +30,16 @@ let xLineStart = 0,
       yLineEnd = 0,
       timeLine;
 
+let bulletTrigger= false, bulImgX, bulImgY, multiBulTrigger = false;
+let shieldTrigger = false, shieldX, shieldY, shieldOnTrigger = false;
+let invisibleTrigger = false, invisibleX, invisibleY, invisibleOnTrigger = false;
+
 function preload() {
   jimg = loadImage("./assets/aircraft.png");
   bimg = loadImage("./assets/fighter-jet.png");
+  bulImg = loadImage("./assets/bullet.png");
+  shieldImg = loadImage("./assets/shield.png");
+  invisibleImg = loadImage("./assets/invisible.png");
 }
 function setup() {
   createCanvas(1067, 600);
@@ -61,6 +68,7 @@ function setup() {
     }
 
     timeLine = setInterval(timeFun, 1000);
+
     displayShip();
     // button.mousePressed(displayShip);
   });
@@ -87,6 +95,24 @@ function setup() {
     alert("Player Left");
     // location.reload();
     waitForPeople();
+  });
+
+  socket.on("multiBullet", (data) => {
+    bulImgX = data.x;
+    bulImgY = data.y;
+    multiBulletFun(bulImgX, bulImgY);
+  });
+
+  socket.on("shield", (data) => {
+    shieldX = data.x;
+    shieldY = data.y;
+    shieldFun(shieldX, shieldY);
+  });
+
+  socket.on("invisible", (data) => {
+    invisibleX = data.x;
+    invisibleY = data.y;
+    invisibleFun(invisibleX, invisibleY);
   });
 
   startScreen();
@@ -144,15 +170,19 @@ function displayShip() {
     push();
     translate(myX, myY);
     rotate(angle + 90);
-    var bulAngle = angle + 90;
     imageMode(CENTER);
+    if(invisibleOnTrigger == true){
+      tint(255, 0);
+    }
     image(jimg, 0, 0, 60, 60);
+    if(invisibleOnTrigger == true){
+      noTint();
+    }
     pop();
 
     push();
     translate(spaceShips[shipNo2].x, spaceShips[shipNo2].y);
     rotate(spaceShips[shipNo2].angle + 90);
-    var bulAngle = angle + 90;
     imageMode(CENTER);
     image(bimg, 0, 0, 60, 60);
     pop();
@@ -160,7 +190,6 @@ function displayShip() {
     push();
     translate(spaceShips[shipNo2].x, spaceShips[shipNo2].y);
     rotate(spaceShips[shipNo2].angle + 90);
-    var bulAngle = angle + 90;
     imageMode(CENTER);
     image(jimg, 0, 0, 60, 60);
     pop();
@@ -168,9 +197,14 @@ function displayShip() {
     push();
     translate(myX, myY);
     rotate(angle + 90);
-    var bulAngle = angle + 90;
     imageMode(CENTER);
+    if(invisibleOnTrigger == true){
+      tint(255, 0);
+    }
     image(bimg, 0, 0, 60, 60);
+    if(invisibleOnTrigger == true){
+      noTint();
+    }
     pop();
   }
 
@@ -225,6 +259,15 @@ function draw() {
     removeElements();
     displayShip();
     displayBullet();
+    if(bulletTrigger){
+      multiBulletFun( bulImgX, bulImgY);
+    }
+    if(shieldTrigger){
+      shieldFun(shieldX, shieldY);
+    }
+    if(invisibleTrigger){
+      invisibleFun(invisibleX, invisibleY);
+    }
 
     push(); // line for timeline
     stroke(0);
@@ -303,12 +346,12 @@ function draw() {
         continue;
       }
       if (
-        dist(
+        (dist(
           bullets[i].bulX,
           bullets[i].bulY,
           spaceShips[shipNo2].x,
           spaceShips[shipNo2].y
-        ) < 21
+        ) < 21) && (shieldOnTrigger == false)
       ) {
         //checks if the distance between the bullet and the plane1 is less than 21
         bullets.splice(i, 1);
@@ -316,19 +359,44 @@ function draw() {
         continue;
       }
     }
-    //   if(mouseIsPressed){
-    //     let bullet = {
-    //       bulX: myX,
-    //       bulY: myY,
-    //       BAngle: angle,
-    //     };
-    //     bullets.push(bullet);
-    //   }
+    if(shieldOnTrigger){
+      setTimeout(() => {
+        shieldOnTrigger = false;
+      }
+      , 4000);
+    }
+    if(invisibleOnTrigger){
+      setTimeout(() => {
+        invisibleOnTrigger = false;
+      }
+      , 4000);
+    }
   }
 } //draw
 
 function mouseClicked() {
   console.log(triggerPoint);
+  if(multiBulTrigger && triggerPoint){
+    let bullet = {
+      bulX: myX,
+      bulY: myY,
+      BAngle: angle-8,
+    };
+    bullets.push(bullet);
+    let bullet2 = {
+      bulX: myX,
+      bulY: myY,
+      BAngle: angle+8,
+    };
+    bullets.push(bullet2);
+    // after 5 sec make the bulletTrigger false
+    setTimeout(() => {
+      multiBulTrigger = false;
+    }, 4000);
+
+    socket.emit("sendBullet", bullet);
+  }
+  else{
   if (triggerPoint) {
     let bullet = {
       bulX: myX,
@@ -338,6 +406,7 @@ function mouseClicked() {
     bullets.push(bullet);
     socket.emit("sendBullet", bullet);
   }
+}
 }
 
 function timeFun() {
@@ -361,4 +430,41 @@ function timeFun() {
     // socket.emit("finalScore", obj);
   }
   // console.log(yLineStart);
+}
+
+function multiBulletFun(x,y){
+  // load image of bullet from assets
+  bulletTrigger = true;
+  image(bulImg, x, y, 20, 20);
+  if(dist(x,y,myX,myY)<45){
+    bulletTrigger = false;
+    // cancel the image of bullet
+    bulImgX = -20;
+    bulImgY = -20
+    multiBulTrigger= true;
+  }
+}
+function shieldFun(x,y){
+  // load image of bullet from assets
+  shieldTrigger = true;
+  image(shieldImg, x, y, 20, 20);
+  if(dist(x,y,myX,myY)<45){
+    shieldTrigger = false;
+    // cancel the image of bullet
+    shieldImgX = -20;
+    shieldImgY = -20
+    shieldOnTrigger= true;
+  }
+}
+function invisibleFun(x,y){
+  // load image of bullet from assets
+  invisibleTrigger = true;
+  image(invisibleImg, x, y, 20, 20);
+  if(dist(x,y,myX,myY)<45){
+    invisibleTrigger = false;
+    // cancel the image of bullet
+    invisibleImgX = -20;
+    invisibleImgY = -20
+    invisibleOnTrigger= true;
+  }
 }
