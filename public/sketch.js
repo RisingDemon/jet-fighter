@@ -31,8 +31,8 @@ let xLineStart = 0,
       timeLine;
 
 let bulletTrigger= false, bulImgX, bulImgY, multiBulTrigger = false;
-let shieldTrigger = false, shieldX, shieldY, shieldOnTrigger = false;
-let invisibleTrigger = false, invisibleX, invisibleY, invisibleOnTrigger = false;
+let shieldTrigger = false, shieldX, shieldY, shieldOnTrigger = false, shieldOnTriggerShip2=false;
+let invisibleTrigger = false, invisibleX, invisibleY, invisibleOnTrigger = false, invisibleOnTriggerShip2=false;
 
 function preload() {
   jimg = loadImage("./assets/aircraft.png");
@@ -115,6 +115,26 @@ function setup() {
     invisibleFun(invisibleX, invisibleY);
   });
 
+  socket.on("shieldOnBroadcast", (data) => {
+    shieldTrigger = false;
+    shieldOnTriggerShip2 = true;
+    setTimeout(() => {
+      shieldOnTriggerShip2 = false;
+    }
+    , 4000);
+  });
+  socket.on("invisibleOnBroadcast", (data) => {
+    invisibleTrigger = false;
+    invisibleOnTriggerShip2 = true;
+    setTimeout(() => {
+      invisibleOnTriggerShip2 = false;
+    }
+    , 4000);
+  });
+  socket.on("clearBulletImgBroadcast", (data) => {
+    bulletTrigger = false;
+  });
+
   startScreen();
 }
 
@@ -184,14 +204,26 @@ function displayShip() {
     translate(spaceShips[shipNo2].x, spaceShips[shipNo2].y);
     rotate(spaceShips[shipNo2].angle + 90);
     imageMode(CENTER);
+    if(invisibleOnTriggerShip2 == true){
+      tint(255, 0);
+    }
     image(bimg, 0, 0, 60, 60);
+    if(invisibleOnTriggerShip2 == true){
+      noTint();
+    }
     pop();
   } else {
     push();
     translate(spaceShips[shipNo2].x, spaceShips[shipNo2].y);
     rotate(spaceShips[shipNo2].angle + 90);
     imageMode(CENTER);
+    if(invisibleOnTriggerShip2 == true){
+      tint(255,0);
+    }
     image(jimg, 0, 0, 60, 60);
+    if(invisibleOnTriggerShip2 == true){
+      noTint();
+    }
     pop();
 
     push();
@@ -238,12 +270,12 @@ function displayBullet() {
     }
 
     if (
-      dist(
+      (dist(
         bullets2[i].bulX,
         bullets2[i].bulY,
         myX,
         myY
-      ) < 21
+      ) < 21) && (shieldOnTrigger == false)
     ) {
       //checks if the distance between the bullet and the plane1 is less than 21
       bullets2.splice(i, 1);
@@ -351,7 +383,7 @@ function draw() {
           bullets[i].bulY,
           spaceShips[shipNo2].x,
           spaceShips[shipNo2].y
-        ) < 21) && (shieldOnTrigger == false)
+        ) < 21) && (shieldOnTriggerShip2 == false)
       ) {
         //checks if the distance between the bullet and the plane1 is less than 21
         bullets.splice(i, 1);
@@ -395,6 +427,7 @@ function mouseClicked() {
     }, 4000);
 
     socket.emit("sendBullet", bullet);
+    socket.emit("sendBullet", bullet2);
   }
   else{
   if (triggerPoint) {
@@ -437,6 +470,7 @@ function multiBulletFun(x,y){
   bulletTrigger = true;
   image(bulImg, x, y, 20, 20);
   if(dist(x,y,myX,myY)<45){
+    socket.emit("clearBulletImg", "bulletTrigger");
     bulletTrigger = false;
     // cancel the image of bullet
     bulImgX = -20;
@@ -449,6 +483,7 @@ function shieldFun(x,y){
   shieldTrigger = true;
   image(shieldImg, x, y, 20, 20);
   if(dist(x,y,myX,myY)<45){
+    socket.emit("shieldIsOn", shieldTrigger);
     shieldTrigger = false;
     // cancel the image of bullet
     shieldImgX = -20;
@@ -461,6 +496,7 @@ function invisibleFun(x,y){
   invisibleTrigger = true;
   image(invisibleImg, x, y, 20, 20);
   if(dist(x,y,myX,myY)<45){
+    socket.emit("invisibleIsOn", invisibleTrigger);
     invisibleTrigger = false;
     // cancel the image of bullet
     invisibleImgX = -20;

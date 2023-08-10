@@ -125,6 +125,15 @@ class ships {
         socket.broadcast.emit("receiveAngle", arg);
     }
     );
+    socket.on("shieldIsOn", (arg) => {
+      socket.broadcast.emit("shieldOnBroadcast", arg);
+    });
+    socket.on("invisibleIsOn", (arg) => {
+      socket.broadcast.emit("invisibleOnBroadcast", arg);
+    });
+    socket.on("clearBulletImg", (arg) => {
+      socket.broadcast.emit("clearBulletImgBroadcast", arg);
+    });
     socket.on("disconnect", function () {
       console.log("Disconnected: " + socket.id);
       clearInterval(bulTime);
